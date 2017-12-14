@@ -138,7 +138,7 @@ public class TmplApi extends MpApi {
 		String template_del_uri = getRequestUri("template_del_uri");
 		WeixinResponse response = weixinExecutor.post(
 				String.format(template_del_uri, token.getAccessToken()),
-				String.format("{\"template_id\"=\"%s\"}", templateId));
+				String.format("{\"template_id\":\"%s\"}", templateId));
 		return response.getAsResult();
 	}
 
@@ -147,7 +147,7 @@ public class TmplApi extends MpApi {
 	 * 
 	 * @param tplMessage
 	 *            消息对象
-	 * @return 发送结果
+	 * @return 发送的消息ID
 	 * @throws WeixinException
 	 * @see <a
 	 *      href="https://mp.weixin.qq.com/wiki?t=resource/res_main&id=mp1433751277&token=&lang=zh_CN">模板消息</a>
@@ -157,7 +157,7 @@ public class TmplApi extends MpApi {
 	 * @see com.foxinmy.weixin4j.mp.message.TemplateMessage
 	 * @see com.foxinmy.weixin4j.msg.event.TemplatesendjobfinishMessage
 	 */
-	public ApiResult sendTmplMessage(TemplateMessage tplMessage)
+	public String sendTmplMessage(TemplateMessage tplMessage)
 			throws WeixinException {
 		Token token = tokenManager.getCache();
 		String template_send_uri = getRequestUri("template_send_uri");
@@ -174,6 +174,6 @@ public class TmplApi extends MpApi {
 					}
 				}));
 
-		return response.getAsResult();
+		return response.getAsJson().getString("msgid");
 	}
 }

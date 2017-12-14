@@ -24,27 +24,33 @@ public class OkHttpClient2Factory extends HttpClientFactory {
 	private final OkHttpClient okClient;
 
 	public OkHttpClient2Factory() {
-		this(new OkHttpClient());
+		okClient = new OkHttpClient();
+		okClient.setHostnameVerifier(HttpClientFactory.AllowHostnameVerifier.GLOBAL);
+		okClient.setSslSocketFactory(HttpClientFactory.allowSSLContext()
+				.getSocketFactory());
+
 	}
 
 	public OkHttpClient2Factory(OkHttpClient okClient) {
 		this.okClient = okClient;
 	}
 
-	@Override
-	protected void resolveHttpParams(HttpParams params) {
-		okClient.setConnectTimeout(params.getConnectTimeout(),
-				TimeUnit.MILLISECONDS);
-		okClient.setReadTimeout(params.getReadTimeout(), TimeUnit.MILLISECONDS);
-		if (params.getProxy() != null) {
-			okClient.setProxy(params.getProxy());
-		}
-		if (params.getHostnameVerifier() != null) {
-			okClient.setHostnameVerifier(params.getHostnameVerifier());
-		}
-		if (params.getSSLContext() != null) {
-			okClient.setSslSocketFactory(params.getSSLContext()
-					.getSocketFactory());
+	private void resolveHttpParams(HttpParams params) {
+		if (params != null) {
+			okClient.setConnectTimeout(params.getConnectTimeout(),
+					TimeUnit.MILLISECONDS);
+			okClient.setReadTimeout(params.getReadTimeout(),
+					TimeUnit.MILLISECONDS);
+			if (params.getProxy() != null) {
+				okClient.setProxy(params.getProxy());
+			}
+			if (params.getSSLContext() != null) {
+				okClient.setSslSocketFactory(params.getSSLContext()
+						.getSocketFactory());
+			}
+			if (params.getHostnameVerifier() != null) {
+				okClient.setHostnameVerifier(params.getHostnameVerifier());
+			}
 		}
 	}
 
@@ -79,7 +85,8 @@ public class OkHttpClient2Factory extends HttpClientFactory {
 	}
 
 	@Override
-	public HttpClient newInstance() {
+	public HttpClient newInstance(HttpParams params) {
+		resolveHttpParams(params);
 		return new OkHttpClient2(okClient);
 	}
 }

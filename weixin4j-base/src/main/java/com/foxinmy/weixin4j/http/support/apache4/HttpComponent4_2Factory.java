@@ -8,7 +8,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.HttpClientConnectionManager;
-import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.protocol.HttpProcessor;
@@ -29,37 +29,20 @@ import com.foxinmy.weixin4j.util.Consts;
  */
 public class HttpComponent4_2Factory extends HttpClientFactory {
 
-	private volatile CloseableHttpClient httpClient;
 	private final HttpClientBuilder clientBuilder;
 
 	public HttpComponent4_2Factory() {
-		this(HttpClients.custom().setDefaultConnectionConfig(
-				ConnectionConfig.custom().setCharset(Consts.UTF_8).build()));
+		clientBuilder = HttpClients.custom().setDefaultConnectionConfig(
+				ConnectionConfig.custom().setCharset(Consts.UTF_8).build());
+		clientBuilder
+				.setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+		clientBuilder.setSSLSocketFactory(new SSLConnectionSocketFactory(
+				HttpClientFactory.allowSSLContext(),
+				SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER));
 	}
 
 	public HttpComponent4_2Factory(HttpClientBuilder clientBuilder) {
 		this.clientBuilder = clientBuilder;
-	}
-
-	@Override
-	public void resolveHttpParams(HttpParams params) {
-		clientBuilder.setDefaultRequestConfig(RequestConfig.custom()
-				.setConnectTimeout(params.getConnectTimeout())
-				.setConnectionRequestTimeout(params.getReadTimeout()).build());
-		if (params.getProxy() != null) {
-			InetSocketAddress socketAddress = (InetSocketAddress) params
-					.getProxy().address();
-			HttpHost proxy = new HttpHost(socketAddress.getHostName(),
-					socketAddress.getPort());
-			clientBuilder.setProxy(proxy);
-		}
-		if (params.getHostnameVerifier() != null) {
-			clientBuilder.setHostnameVerifier(new CustomHostnameVerifier(params
-					.getHostnameVerifier()));
-		}
-		if (params.getSSLContext() != null) {
-			clientBuilder.setSslcontext(params.getSSLContext());
-		}
 	}
 
 	public HttpComponent4_2Factory setDefaultConnectionConfig(
@@ -91,11 +74,37 @@ public class HttpComponent4_2Factory extends HttpClientFactory {
 		return this;
 	}
 
-	@Override
-	public HttpClient newInstance() {
-		if (httpClient == null) {
-			this.httpClient = clientBuilder.build();
+	private void resolveHttpParams(HttpParams params) {
+		if (params != null) {
+			clientBuilder.setDefaultRequestConfig(RequestConfig.custom()
+					.setConnectTimeout(params.getConnectTimeout())
+					.setConnectionRequestTimeout(params.getReadTimeout())
+					.build());
+			if (params.getProxy() != null) {
+				InetSocketAddress socketAddress = (InetSocketAddress) params
+						.getProxy().address();
+				HttpHost proxy = new HttpHost(socketAddress.getHostName(),
+						socketAddress.getPort());
+				clientBuilder.setProxy(proxy);
+			}
+			if (params.getSSLContext() != null) {
+				clientBuilder
+						.setSSLSocketFactory(new SSLConnectionSocketFactory(
+								params.getSSLContext(),
+								params.getHostnameVerifier() != null ? new CustomHostnameVerifier(
+										params.getHostnameVerifier())
+										: SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER));
+			}
+			if (params.getHostnameVerifier() != null) {
+				clientBuilder.setHostnameVerifier(new CustomHostnameVerifier(
+						params.getHostnameVerifier()));
+			}
 		}
-		return new HttpComponent4_2(httpClient);
+	}
+
+	@Override
+	public HttpClient newInstance(HttpParams params) {
+		resolveHttpParams(params);
+		return new HttpComponent4_2(clientBuilder.build());
 	}
 }

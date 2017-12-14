@@ -15,19 +15,8 @@ import com.foxinmy.weixin4j.http.SimpleHttpClient;
  */
 public class SimpleHttpClientFactory extends HttpClientFactory {
 
-	private volatile SimpleHttpClient httpClient;
-	private HttpParams params;
-
 	@Override
-	protected void resolveHttpParams(HttpParams params) {
-		this.params = params;
-	}
-
-	@Override
-	public HttpClient newInstance() {
-		if (this.httpClient == null) {
-			this.httpClient = new SimpleHttpClient(params);
-		}
-		return this.httpClient;
+	public HttpClient newInstance(HttpParams params) {
+		return new SimpleHttpClient(params);
 	}
 }

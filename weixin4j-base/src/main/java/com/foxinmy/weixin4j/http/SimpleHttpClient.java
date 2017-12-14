@@ -28,7 +28,7 @@ import com.foxinmy.weixin4j.util.StringUtil;
  * @since JDK 1.6
  * @see
  */
-public class SimpleHttpClient extends AbstractHttpClient implements HttpClient {
+public class SimpleHttpClient extends AbstractHttpClient {
 
 	private final HttpParams params;
 
@@ -43,26 +43,22 @@ public class SimpleHttpClient extends AbstractHttpClient implements HttpClient {
 		URLConnection urlConnection = proxy != null ? uri.toURL()
 				.openConnection(proxy) : uri.toURL().openConnection();
 		if (uri.getScheme().equals("https")) {
-			try {
-				SSLContext sslContext = null;
-				HostnameVerifier hostnameVerifier = null;
-				if (params != null) {
-					sslContext = params.getSSLContext();
-					hostnameVerifier = params.getHostnameVerifier();
-				}
-				if (sslContext == null) {
-					sslContext = HttpClientFactory.allowSSLContext();
-				}
-				if (hostnameVerifier == null) {
-					hostnameVerifier = HttpClientFactory.AllowHostnameVerifier.GLOBAL;
-				}
-				HttpsURLConnection connection = (HttpsURLConnection) urlConnection;
-				connection.setSSLSocketFactory(sslContext.getSocketFactory());
-				connection.setHostnameVerifier(hostnameVerifier);
-				return connection;
-			} catch (HttpClientException e) {
-				throw new IOException(e);
+			SSLContext sslContext = null;
+			HostnameVerifier hostnameVerifier = null;
+			if (params != null) {
+				sslContext = params.getSSLContext();
+				hostnameVerifier = params.getHostnameVerifier();
 			}
+			if (sslContext == null) {
+				sslContext = HttpClientFactory.allowSSLContext();
+			}
+			if (hostnameVerifier == null) {
+				hostnameVerifier = HttpClientFactory.AllowHostnameVerifier.GLOBAL;
+			}
+			HttpsURLConnection connection = (HttpsURLConnection) urlConnection;
+			connection.setSSLSocketFactory(sslContext.getSocketFactory());
+			connection.setHostnameVerifier(hostnameVerifier);
+			return connection;
 		} else {
 			return (HttpURLConnection) urlConnection;
 		}
@@ -75,11 +71,6 @@ public class SimpleHttpClient extends AbstractHttpClient implements HttpClient {
 			// create connection object
 			HttpURLConnection connection = createHttpConnection(request);
 			String method = request.getMethod().name();
-			// set parameters
-			if (params != null) {
-				connection.setConnectTimeout(params.getConnectTimeout());
-				connection.setReadTimeout(params.getReadTimeout());
-			}
 			connection.setRequestMethod(method);
 			connection.setDoInput(true);
 			connection.setInstanceFollowRedirects("GET".equals(method));
@@ -148,7 +139,7 @@ public class SimpleHttpClient extends AbstractHttpClient implements HttpClient {
 		} catch (IOException e) {
 			throw new HttpClientException("I/O error on "
 					+ request.getMethod().name() + " request for \""
-					+ request.getURI().toString() + "\":" + e.getMessage(), e);
+					+ request.getURI().toString(), e);
 		} finally {
 			if (response != null) {
 				response.close();

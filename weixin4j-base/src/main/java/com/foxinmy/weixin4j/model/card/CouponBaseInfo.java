@@ -69,12 +69,12 @@ public class CouponBaseInfo implements Serializable {
 	 * 是否自定义Code码
 	 */
 	@JSONField(name = "use_custom_code")
-	private boolean useCustomCode;
+	private Boolean useCustomCode;
 	/**
 	 * 指定特殊用户群体
 	 */
 	@JSONField(name = "bind_openid")
-	private boolean bindOpenId;
+	private Boolean bindOpenId;
 	/**
 	 * 客服电话
 	 */
@@ -155,6 +155,9 @@ public class CouponBaseInfo implements Serializable {
 	@JSONField(name = "can_give_friend")
 	private boolean canGiveFriend;
 
+	@JSONField(name = "need_push_on_view")
+	private Boolean needPushOnView;
+
 	private CouponBaseInfo(Builder builder) {
 		this.logoUrl = builder.logoUrl;
 		this.brandName = builder.brandName;
@@ -183,6 +186,7 @@ public class CouponBaseInfo implements Serializable {
 		this.limitNum = builder.limitNum;
 		this.canShare = builder.canShare;
 		this.canGiveFriend = builder.canGiveFriend;
+		this.needPushOnView = builder.needPushOnView;
 	};
 
 	public String getLogoUrl() {
@@ -221,11 +225,11 @@ public class CouponBaseInfo implements Serializable {
 		return date;
 	}
 
-	public boolean isUseCustomCode() {
+	public Boolean isUseCustomCode() {
 		return useCustomCode;
 	}
 
-	public boolean isBindOpenId() {
+	public Boolean isBindOpenId() {
 		return bindOpenId;
 	}
 
@@ -293,6 +297,10 @@ public class CouponBaseInfo implements Serializable {
 		return canGiveFriend;
 	}
 
+	public Boolean getNeedPushOnView() {
+		return needPushOnView;
+	}
+
 	@Override
 	public String toString() {
 		return "logoUrl=" + logoUrl + ", brandName=" + brandName + ", title="
@@ -310,6 +318,14 @@ public class CouponBaseInfo implements Serializable {
 				+ ", promotionSubTitle=" + promotionSubTitle + ", source="
 				+ source + ", limitNum=" + limitNum + ", canShare=" + canShare
 				+ ", canGiveFriend=" + canGiveFriend;
+	}
+
+	public void cleanCantUpdateField() {
+		this.brandName = null;
+//		this.title = null;
+		this.sku = null;
+		this.bindOpenId = null;
+		this.useCustomCode = null;
 	}
 
 	/**
@@ -432,9 +448,18 @@ public class CouponBaseInfo implements Serializable {
 		 */
 		private boolean canGiveFriend;
 
+		/**
+		 * 用户点击进入卡券时推送事件
+		 */
+		private boolean needPushOnView;
+
+		/**
+		 * 默认永久有效
+		 */
 		public Builder() {
 			this.sku = new JSONObject();
 			this.date = new JSONObject();
+			this.date.put("type",CardActiveType.DATE_TYPE_PERMANENT);
 			this.useAllLocation = true;
 			this.canShare = true;
 			this.canGiveFriend = true;
@@ -534,6 +559,7 @@ public class CouponBaseInfo implements Serializable {
 		 * @return
 		 */
 		public Builder quantity(int quantity) {
+			quantity = quantity > 100000000 ? 100000000 : quantity;
 			this.sku.put("quantity", quantity);
 			return this;
 		}
@@ -573,6 +599,23 @@ public class CouponBaseInfo implements Serializable {
 			this.date.put("fixed_term", days);
 			this.date.put("fixed_begin_term", beginDays);
 			this.date.put("end_timestamp", endTime.getTime() / 1000l);
+			return this;
+		}
+
+		/**
+		 * 设置卡券在领取多少天后有效
+		 *
+		 * @param days
+		 *            表示自领取后多少天内有效，不支持填写0。
+		 * @param beginDays
+		 *            表示自领取后多少天开始生效，领取后当天生效填写0。（单位为天）
+		 * @return
+		 */
+		public Builder activeAt(int days, int beginDays) {
+			this.date.clear();
+			this.date.put("type", CardActiveType.DATE_TYPE_FIX_TERM);
+			this.date.put("fixed_term", days);
+			this.date.put("fixed_begin_term", beginDays);
 			return this;
 		}
 
@@ -781,6 +824,11 @@ public class CouponBaseInfo implements Serializable {
 			return this;
 		}
 
+		public Builder needPushOnView(boolean needPushOnView){
+			this.needPushOnView = needPushOnView;
+			return this;
+		}
+
 		/**
 		 * 返回卡券的基础信息
 		 * 
@@ -807,7 +855,10 @@ public class CouponBaseInfo implements Serializable {
 			/**
 			 * 表示固定时长 （自领取后按天算。
 			 */
-			DATE_TYPE_FIX_TERM;
+			DATE_TYPE_FIX_TERM, /**
+			 * 永久有效
+			 */
+			DATE_TYPE_PERMANENT;
 		}
 	}
 }

@@ -34,7 +34,7 @@ public abstract class HttpClientTest {
 	protected abstract HttpClientFactory createHttpFactory();
 
 	protected HttpClient createHttpClient() {
-		return createHttpFactory().newInstance();
+		return createHttpFactory().newInstance(null);
 	}
 
 	protected HttpClient createProxyHttpClient() {
@@ -43,15 +43,14 @@ public abstract class HttpClientTest {
 		return createHttpClient(params);
 	}
 
-	protected HttpClient createSSLHttpClient() throws HttpClientException {
+	protected HttpClient createSSLHttpClient() {
 		HttpParams params = new HttpParams();
 		params.setHostnameVerifier(HttpClientFactory.AllowHostnameVerifier.GLOBAL);
 		params.setSSLContext(HttpClientFactory.allowSSLContext());
 		return createHttpClient(params);
 	}
 
-	protected HttpClient createProxyAndSSLHttpClient()
-			throws HttpClientException {
+	protected HttpClient createProxyAndSSLHttpClient() {
 		HttpParams params = new HttpParams();
 		params.setHostnameVerifier(HttpClientFactory.AllowHostnameVerifier.GLOBAL);
 		params.setSSLContext(HttpClientFactory.allowSSLContext());
@@ -61,8 +60,8 @@ public abstract class HttpClientTest {
 
 	protected HttpClient createHttpClient(HttpParams params) {
 		HttpClientFactory httpClientFactory = createHttpFactory();
-		httpClientFactory.setDefaultParams(params);
-		return httpClientFactory.newInstance();
+		HttpClientFactory.setDefaultParams(params);
+		return httpClientFactory.newInstance(null);
 	}
 
 	@Test

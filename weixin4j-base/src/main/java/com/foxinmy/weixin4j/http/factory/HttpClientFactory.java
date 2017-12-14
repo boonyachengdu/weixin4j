@@ -11,7 +11,6 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509TrustManager;
 
 import com.foxinmy.weixin4j.http.HttpClient;
-import com.foxinmy.weixin4j.http.HttpClientException;
 import com.foxinmy.weixin4j.http.HttpParams;
 import com.foxinmy.weixin4j.http.support.apache3.HttpComponent3Factory;
 import com.foxinmy.weixin4j.http.support.apache4.HttpComponent4Factory;
@@ -33,6 +32,7 @@ public abstract class HttpClientFactory {
 	 * 默认的HttpClient
 	 */
 	private static volatile HttpClientFactory defaultFactory = newDefaultFactory();
+	private static volatile HttpParams defaultParams;
 
 	/**
 	 * NettyHttpClient -> ApacheHttpClient(HttpComponent3&4) ->
@@ -85,56 +85,59 @@ public abstract class HttpClientFactory {
 	}
 
 	/**
+	 * 获取默认的HttpParams
+	 * 
+	 * @return
+	 */
+	public static HttpParams getDefaultParams() {
+		return defaultParams;
+	}
+
+	/**
+	 * Resolve the Http Parameter
+	 * 
+	 * @param params
+	 *            请求参数
+	 */
+	public static void setDefaultParams(HttpParams params) {
+		if (params == null) {
+			throw new IllegalArgumentException("'params' must not be empty");
+		}
+		HttpClientFactory.defaultParams = params;
+	}
+
+	/**
 	 * 获取HttpClient实例
 	 * 
 	 * @return
 	 */
 	public static HttpClient getInstance() {
-		return getDefaultFactory().newInstance();
+		return getInstance(HttpClientFactory.defaultParams);
 	}
 
 	/**
 	 * 获取HttpClient实例
 	 * 
-	 * @param params Http参数
+	 * @param params
+	 *            Http参数
 	 * 
 	 * @return HttpClinet实例
 	 */
 	public static HttpClient getInstance(HttpParams params) {
 		HttpClientFactory clientFactory = getDefaultFactory();
-		clientFactory.setDefaultParams(params);
-		return clientFactory.newInstance();
+		return clientFactory.newInstance(params);
 	}
-
-	/**
-	 * Resolve the Http Parameter
-	 * 
-	 * @param params
-	 *            请求参数
-	 */
-	public void setDefaultParams(HttpParams params) {
-		if (params == null) {
-			throw new IllegalArgumentException("'params' must not be empty");
-		}
-		resolveHttpParams(params);
-	}
-
-	/**
-	 * Resolve the Http Parameter
-	 * 
-	 * @param params
-	 *            请求参数
-	 */
-	protected abstract void resolveHttpParams(HttpParams params);
 
 	/**
 	 * 获取HttpClient实例
 	 * 
+	 * @param params
+	 *            http参数 可为空
 	 * @return
 	 */
-	public abstract HttpClient newInstance();
+	public abstract HttpClient newInstance(HttpParams params);
 
-	public static SSLContext allowSSLContext() throws HttpClientException {
+	public static SSLContext allowSSLContext() {
 		try {
 			SSLContext sslContext = SSLContext.getInstance("TLS");
 			sslContext.init(null,
@@ -142,10 +145,10 @@ public abstract class HttpClientFactory {
 					new java.security.SecureRandom());
 			return sslContext;
 		} catch (NoSuchAlgorithmException e) {
-			throw new HttpClientException(
+			throw new RuntimeException(
 					"Create SSLContext NoSuchAlgorithmException:", e);
 		} catch (KeyManagementException e) {
-			throw new HttpClientException(
+			throw new RuntimeException(
 					"Create SSLContext KeyManagementException:", e);
 		}
 	}

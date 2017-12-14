@@ -1,8 +1,16 @@
 package com.foxinmy.weixin4j.api;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -21,6 +29,7 @@ import com.foxinmy.weixin4j.payment.mch.SettlementRecord;
 import com.foxinmy.weixin4j.type.CurrencyType;
 import com.foxinmy.weixin4j.util.DateUtil;
 import com.foxinmy.weixin4j.util.RandomUtil;
+import com.foxinmy.weixin4j.util.StringUtil;
 import com.foxinmy.weixin4j.xml.XmlStream;
 
 /**
@@ -61,18 +70,55 @@ public class CashApi extends MchApi {
 	 */
 	public RedpacketSendResult sendRedpack(Redpacket redpacket)
 			throws WeixinException {
+		String appId = redpacket.getAppId();
 		super.declareMerchant(redpacket);
-		JSONObject obj = (JSONObject) JSON.toJSON(redpacket);
+		final JSONObject obj = (JSONObject) JSON.toJSON(redpacket);
+		if (StringUtil.isNotBlank(appId)) {
+			obj.put("appid", appId);
+		}
 		obj.put("wxappid", obj.remove("appid"));
+		final String redpack_uri = redpacket.getTotalNum() > 1 ? getRequestUri("groupredpack_send_uri")
+				: getRequestUri("redpack_send_uri");
 		obj.put("sign", weixinSignature.sign(obj));
 		String param = XmlStream.map2xml(obj);
-		WeixinResponse response = createSSLRequestExecutor()
-				.post(redpacket.getTotalNum() > 1 ? getRequestUri("groupredpack_send_uri")
-						: getRequestUri("redpack_send_uri"), param);
+		WeixinResponse response = getWeixinSSLExecutor().post(redpack_uri,
+				param);
 		String text = response.getAsString()
 				.replaceFirst("<wxappid>", "<appid>")
 				.replaceFirst("</wxappid>", "</appid>");
 		return XmlStream.fromXML(text, RedpacketSendResult.class);
+	}
+
+	/**
+	 * 批量发放红包 企业向微信用户个人发现金红包
+	 *
+	 * @param redpacket
+	 *            多个红包信息
+	 * @return 发放结果
+	 * @see #sendRedpacks(Redpacket...)
+	 * @throws WeixinException
+	 */
+	public List<Future<RedpacketSendResult>> sendRedpacks(
+			Redpacket... redpackets) {
+		ExecutorService sendExecutor = Executors.newFixedThreadPool(Math.max(1,
+				redpackets.length / 10)); // 十分之一?
+		CompletionService<RedpacketSendResult> completion = new ExecutorCompletionService<RedpacketSendResult>(
+				sendExecutor);
+		List<Future<RedpacketSendResult>> callSendList = new ArrayList<Future<RedpacketSendResult>>(
+				redpackets.length);
+		for (final Redpacket redpacket : redpackets) {
+			Future<RedpacketSendResult> futureSend = completion
+					.submit(new Callable<RedpacketSendResult>() {
+						@Override
+						public RedpacketSendResult call() throws Exception {
+							return sendRedpack(redpacket);
+						}
+					});
+			callSendList.add(futureSend);
+		}
+		// 关闭启动线程,不再接受新的任务
+		sendExecutor.shutdown();
+		return callSendList;
 	}
 
 	/**
@@ -97,7 +143,7 @@ public class CashApi extends MchApi {
 		para.put("mch_billno", outTradeNo);
 		para.put("sign", weixinSignature.sign(para));
 		String param = XmlStream.map2xml(para);
-		WeixinResponse response = createSSLRequestExecutor().post(
+		WeixinResponse response = getWeixinSSLExecutor().post(
 				getRequestUri("redpack_query_uri"), param);
 		return response.getAsObject(new TypeReference<RedpacketRecord>() {
 		});
@@ -133,7 +179,7 @@ public class CashApi extends MchApi {
 		obj.put("mch_appid", obj.remove("appid"));
 		obj.put("sign", weixinSignature.sign(obj));
 		String param = XmlStream.map2xml(obj);
-		WeixinResponse response = createSSLRequestExecutor().post(
+		WeixinResponse response = getWeixinSSLExecutor().post(
 				getRequestUri("corppayment_send_uri"), param);
 		String text = response.getAsString()
 				.replaceFirst("<mch_appid>", "<appid>")
@@ -164,7 +210,7 @@ public class CashApi extends MchApi {
 		obj.put("partner_trade_no", outTradeNo);
 		obj.put("sign", weixinSignature.sign(obj));
 		String param = XmlStream.map2xml(obj);
-		WeixinResponse response = createSSLRequestExecutor().post(
+		WeixinResponse response = getWeixinSSLExecutor().post(
 				getRequestUri("corppayment_query_uri"), param);
 		return response.getAsObject(new TypeReference<CorpPaymentRecord>() {
 		});

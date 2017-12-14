@@ -108,9 +108,10 @@ public class WeixinRequestExecutor {
 	public WeixinResponse get(String url, URLParameter... parameters)
 			throws WeixinException {
 		// always contain the question mark
-		StringBuilder buf = new StringBuilder(url).append("&");
+		StringBuilder buf = new StringBuilder(url);
 		if (parameters != null && parameters.length > 0) {
-			buf.append(FormUrlEntity.formatParameters(Arrays.asList(parameters)));
+			buf.append("&").append(
+					FormUrlEntity.formatParameters(Arrays.asList(parameters)));
 		}
 		HttpRequest request = new HttpRequest(HttpMethod.GET, buf.toString());
 		return doRequest(request);
@@ -127,8 +128,13 @@ public class WeixinRequestExecutor {
 	public WeixinResponse doRequest(HttpRequest request) throws WeixinException {
 		try {
 			if (logger.isEnabled(InternalLogLevel.DEBUG)) {
-				logger.debug("weixin request >> " + request.getMethod() + " "
-						+ request.getURI().toString());
+				logger.debug("weixin request >> "
+						+ request.getMethod()
+						+ " "
+						+ request.getURI().toString()
+						+ (request.getEntity() instanceof StringEntity ? " >> "
+								+ ((StringEntity) request.getEntity())
+										.getContentString() : ""));
 			}
 			HttpResponse httpResponse = httpClient.execute(request);
 			WeixinResponse response = new WeixinResponse(httpResponse);
@@ -171,7 +177,7 @@ public class WeixinRequestExecutor {
 			logger.debug("weixin response << "
 					+ response.getProtocol()
 					+ response.getStatus()
-					+ ":"
+					+ " << "
 					+ (hasStreamMimeType ? response.getHeaders()
 							.getContentType() : response.getAsString()));
 		}
